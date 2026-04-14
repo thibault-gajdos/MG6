@@ -84,7 +84,7 @@
 <text x='245.49' y='476.07' text-anchor='middle' style='font-size: 14.40px;fill: #4D4D4D; font-family: "Arial";' textLength='20.00px' lengthAdjust='spacingAndGlyphs'>2.0</text>
 <text x='317.30' y='476.07' text-anchor='middle' style='font-size: 14.40px;fill: #4D4D4D; font-family: "Arial";' textLength='20.00px' lengthAdjust='spacingAndGlyphs'>2.5</text>
 <text x='389.11' y='476.07' text-anchor='middle' style='font-size: 14.40px;fill: #4D4D4D; font-family: "Arial";' textLength='20.00px' lengthAdjust='spacingAndGlyphs'>3.0</text>
-<text x='230.20' y='494.73' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='167.09px' lengthAdjust='spacingAndGlyphs'>Confirmation time (s)</text>
+<text x='230.20' y='494.73' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='146.09px' lengthAdjust='spacingAndGlyphs'>Response time (s)</text>
 <text transform='translate(18.37,233.16) rotate(-90)' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='87.75px' lengthAdjust='spacingAndGlyphs'>View again</text>
 <rect x='413.53' y='199.32' width='84.99' height='67.68' style='stroke-width: 1.07; stroke: none; fill: #FFFFFF;' />
 <text x='419.01' y='219.58' style='font-size: 18.00px; font-family: "Arial";' textLength='74.03px' lengthAdjust='spacingAndGlyphs'>Accuracy</text>

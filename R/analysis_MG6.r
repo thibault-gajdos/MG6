@@ -12,6 +12,9 @@ library("brms")
 library("sjPlot")
 library("lme4")
 library('ggplot2')
+library("statConfR")
+library("snow")
+
 
 # ---------------------------------------------------
 ## * Load and clean data
@@ -45,6 +48,9 @@ data$cond_order = as.factor(data$cond_order)
 data$rt_gabor_centered <- data$rt_gabor - mean(data$rt_gabor, na.rm = TRUE)
 data$dt <-  data$OOZ_time
 data$dt_centered <- data$OOZ_time - mean(data$OOZ_time, na.rm = TRUE)
+
+data$ct <- data$rt_gabor - data$OOZ_time
+data$ct_centered <- data$ct - mean(data$ct, na.rm = TRUE)
 
 data$acc_num <- data$accuracy_gabor
 data$accuracy_gabor <- as.factor(data$accuracy_gabor)
@@ -91,10 +97,10 @@ d <- data  %>%
 tab_df(d, file = './tables/descriptive.html')
 
 # ---------------------------------------------------
-## * fit confirmation time
+## * fit response time (= commitment time + confirmation time)
 # ---------------------------------------------------
 
-fit.confirmation_time  <- brm(
+fit.response_time  <- brm(
         rt_gabor * 1000 ~ accuracy_gabor * size * position +
                 (1 + accuracy_gabor * size * position | subject_id),
         family = exgaussian(link = "identity"),
@@ -104,19 +110,19 @@ fit.confirmation_time  <- brm(
         iter = 4000, warmup = 1000, seed = 123,
         save_pars = save_pars(all = TRUE)
 )
-saveRDS(fit.confirmation_time, "./results/fit_confirmation_time.rds")
-tab_model(fit.confirmation_time, file = "./tables/fit_confirmation_time.html")
+saveRDS(fit.response_time, "./results/fit_response_time.rds")
+tab_model(fit.response_time, file = "./tables/fit_response_time.html")
 
 # ---------------------------------------------------
 # Figure 2B
 # ---------------------------------------------------
-fit.confirmation_time <- readRDS("./results/fit_confirmation_time.rds")
-size <-  conditional_effects(fit.confirmation_time, "size")
+fit.response_time <- readRDS("./results/fit_response_time.rds")
+size <-  conditional_effects(fit.response_time, "size")
 
 plot <- plot(size, plot = FALSE)[[1]] +
-        labs(y = "Confirmation Time (ms)") +
+        labs(y = "Response Time (ms)") +
         theme(text = element_text(size = 18))
-ggsave('./plots/confirmation_time_size_2B.svg', plot)
+ggsave('./plots/response_time_size_2B.svg', plot)
 
 # ---------------------------------------------------
 # fit commitmment time 
@@ -129,11 +135,26 @@ fit.commitment_time <- brm(OOZ_time*1000 ~  accuracy_gabor * size * position  +
            cores = 4, chains = 4,
            control = list(adapt_delta = .95,  max_treedepth = 12),
            iter = 4000,  warmup = 1000, seed = 123,
-           save_model = 'dt.stan',
            save_pars = save_pars(all = TRUE)
            )
 saveRDS(fit.commitment_time, "./results/fit_commitment_time.rds")
 tab_model(fit.commitment_time, file = "./tables/fit_commitment_time.html")
+
+# ---------------------------------------------------
+## * fit confirmation time
+# ---------------------------------------------------
+
+fit.confirmation_time <- brm(ct*1000 ~  accuracy_gabor * size * position  +
+                     (1 + accuracy_gabor * size * position |subject_id) ,
+           family=exgaussian(link="identity"),
+           data = data,
+           cores = 4, chains = 4,
+           control = list(adapt_delta = .98,  max_treedepth = 12),
+           iter = 4000,  warmup = 2000, seed = 321,
+           save_pars = save_pars(all = TRUE)
+           )
+saveRDS(fit.confirmation_time, "./results/fit_confirmation_time.rds")
+tab_model(fit.confirmation_time, file = "./tables/fit_confirmation_time.html")
 
 
 # ---------------------------------------------------
@@ -150,7 +171,6 @@ fit_acc <- brm(accuracy_gabor  ~ size * position * dt_centered + (1 + size * pos
            )
 saveRDS(fit_acc, "./results/fit_acc.rds")
 tab_model(fit_acc, file = "./tables/fit_accuracy.html")
-         -0.11699656 0.05544853 -0.22540972 -0.008194695
 
 # ---------------------------------------------------
 # Figure 2A
@@ -178,10 +198,35 @@ fit.conf <- brm(view_again ~ accuracy_gabor * size * position * rt_gabor_centere
         iter = 3000, warmup = 1000, seed = 123,
         save_pars = save_pars(all = TRUE)
 )
-
-
 saveRDS(fit.conf, "./results/fit_conf.rds")
 tab_model(fit.conf, file = "./tables/fit_conf.html")
+
+## Alternative: ct = use Confirmation time - commitment time
+fit.conf.ct <- brm(view_again ~ accuracy_gabor * size * position * ct_centered + (1 + accuracy_gabor * size * position * ct_centered | subject_id),
+        family = bernoulli(link = "logit"),
+        data = data,
+        init = 0,
+        cores = 4, chains = 4,
+        control = list(adapt_delta = .9, max_treedepth = 12),
+        iter = 3000, warmup = 1000, seed = 123,
+        save_pars = save_pars(all = TRUE)
+)
+saveRDS(fit.conf.ct, "./results/fit_conf_ct.rds")
+tab_model(fit.conf.ct, file = "./tables/fit_conf_ct.html")
+
+## Alternative:  Confirmation time + commitment time
+fit.conf.ctdt <- brm(view_again ~ accuracy_gabor * size * position * (ct_centered + dt_centered) + (1 + accuracy_gabor * size * position * (ct_centered + dt_centered) | subject_id),
+        family = bernoulli(link = "logit"),
+        data = data,
+        init = 0,
+        cores = 4, chains = 4,
+        control = list(adapt_delta = .9, max_treedepth = 12),
+        iter = 3000, warmup = 1000, seed = 123,
+        save_pars = save_pars(all = TRUE)
+)
+saveRDS(fit.conf.ctdt, "./results/fit_conf_ctdt.rds")
+tab_model(fit.conf.ctdt, file = "./tables/fit_conf_ctdt.html")
+
 
 # ---------------------------------------------------
 # Figure 2C
@@ -208,7 +253,7 @@ plot <- ggplot(df, aes(x = rt_gabor, y = estimate__, color = size)) +
         geom_line() +
         geom_ribbon(aes(ymin = lower__, ymax = upper__, fill = size),
                 alpha = 0.2, color = NA) +
-        labs(x = "Confirmation time (s)", y = "View again") +
+        labs(x = "Response time (s)", y = "View again") +
     theme(text = element_text(size = 18))          
 ggsave("./plots/conf_size_rt_2D.svg", plot)
 
@@ -228,7 +273,7 @@ plot <- ggplot(df, aes(
         geom_line(linewidth = 1) +
         geom_ribbon(aes(ymin = lower__, ymax = upper__), alpha = 0.2, color = NA) +
         labs(
-            x = "Confirmation time (s)",
+            x = "Response time (s)",
             y = "View again",
             color = "Accuracy",
             fill = "Accuracy"
@@ -240,8 +285,9 @@ ggsave('./plots/conf_acc_rt_S1.svg', plot)
 
 # ---------------------------------------------------
 ## Additional analysis Revision I
-## Effect of see_again on accuracy
+## Effect of see_again on accuracy 
 # ---------------------------------------------------
+
 
 ## Compute final_accuracy : accuracy of the revised decision
 dd <- data %>% filter(view_again == 1) %>% ## select trials for which view_again
@@ -300,3 +346,121 @@ summary(ll)
 
 
 
+# ---------------------------------------------------
+## Additional analysis Revision III
+## Metacognitive efficiency
+# ---------------------------------------------------
+
+data_conf <- data %>%
+  select(subject_id, size, acc_num, view_again_num, expected_gabor, trial) %>%
+  rename(trialNo = trial, correct = acc_num, diffCond = size, participant = subject_id, stimulus = expected_gabor) %>%
+  mutate(
+    rating = factor(1 - view_again_num),
+    stimulus = factor(stimulus),
+    diffCond = factor(diffCond)
+  ) %>%
+  select(-view_again_num)
+
+
+MetaD_small <- fitMetaDprime(data = data_conf%>%filter(diffCond == "small"), model="ML", .parallel = TRUE)
+MetaD_small <- MetaD_small %>% rename(Ratio_small = Ratio)
+MetaD_big <- fitMetaDprime(data = data_conf%>%filter(diffCond == "big"), model="ML", .parallel = TRUE)
+MetaD_big <- MetaD_big %>% rename(Ratio_big = Ratio)
+
+metaD <- merge(
+  MetaD_small[, c("participant", "Ratio_small")],
+  MetaD_big[, c("participant", "Ratio_big")],
+  by = "participant"
+)
+
+t.test(metaD$Ratio_small, metaD$Ratio_big, paired = TRUE)
+
+## 	Paired t-test
+
+## data:  metaD$Ratio_small and metaD$Ratio_big
+## t = 2.7873, df = 23, p-value = 0.01047
+## alternative hypothesis: true mean difference is not equal to 0
+## 95 percent confidence interval:
+##  0.09616706 0.64983911
+## sample estimates:
+## mean difference 
+##       0.3730031 
+
+
+
+metaIMeasures_small <- estimateMetaI(data_conf%>%filter(diffCond == "small"), bias_reduction = TRUE)
+metaIMeasures_big <- estimateMetaI(data_conf%>%filter(diffCond == "big"), bias_reduction = TRUE)
+metaIMeasures_small <- metaIMeasures_small %>% rename(debiased.meta_I_small = debiased.meta_I)
+metaIMeasures_big <- metaIMeasures_big %>% rename(debiased.meta_I_big = debiased.meta_I)
+metaI <- merge(
+  metaIMeasures_small[, c("participant", "debiased.meta_I_small")],
+  metaIMeasures_big[, c("participant", "debiased.meta_I_big")],
+  by = "participant"
+)
+
+
+t.test(metaI$debiased.meta_I_small, metaI$debiased.meta_I_big, paired = TRUE)
+## data:  metaI$debiased.meta_I_small and metaI$debiased.meta_I_big
+## t = 1.5267, df = 23, p-value = 0.1405
+## alternative hypothesis: true mean difference is not equal to 0
+## 95 percent confidence interval:
+##  -0.00463507  0.03075211
+## sample estimates:
+## mean difference 
+##      0.01305852 
+
+
+metaIMeasures_small <- metaIMeasures_small %>% rename(debiased.RMI_small = debiased.RMI)
+metaIMeasures_big <- metaIMeasures_big %>% rename(debiased.RMI_big = debiased.RMI)
+metaI <- merge(
+  metaIMeasures_small[, c("participant", "debiased.RMI_small")],
+  metaIMeasures_big[, c("participant", "debiased.RMI_big")],
+  by = "participant"
+)
+
+
+t.test(metaI$debiased.RMI_small, metaI$debiased.RMI_big, paired = TRUE)
+
+
+
+# ---------------------------------------------------
+## Additional analysis Revision IV
+## change of mind and final accuracy
+# ---------------------------------------------------
+
+
+
+data$change_of_mind = (data$meta_evaluation == "I")
+
+## Q1: does change of mind depends on the circle size?
+fit_com <- brm(change_of_mind ~ accuracy_gabor  * size  * rt_gabor_centered * position + (1 +  accuracy_gabor * size  * rt_gabor_centered * position|  subject_id),
+               family = bernoulli(link = "logit"),
+           data = data,
+           cores = 4, chains = 4,
+           control = list(adapt_delta = .9,  max_treedepth = 12),
+           iter = 3000,  warmup = 1000, seed = 123,
+           )
+saveRDS(fit_com, "./results/fit_com.rds")
+tab_model(fit_com, file = "./tables/fit_com.html")
+
+
+## Q2 :impact of final accuracy
+data %>% summarise(acc = mean(acc_num), acc_final= mean(meta_acc_num))
+## 1 0.7060781 0.6009317
+fit_acc2 <- brm(meta_acc_num ~ accuracy_gabor  * size  * rt_gabor_centered * position+ (1 +  accuracy_gabor * size  * rt_gabor_centered  | subject_id),
+               family = bernoulli(link = "logit"),
+           data = data,
+           cores = 4, chains = 4,
+           control = list(adapt_delta = .9,  max_treedepth = 12),
+           iter = 3000,  warmup = 1000, seed = 123,
+           )
+saveRDS(fit_acc2, "./results/fit_acc2.rds")
+tab_model(fit_acc2, file = "./tables/fit_accuracy2.html")
+
+
+size_acc <- conditional_effects(fit_acc2, "accuracy_gabor:size")
+plot(size_acc)
+plot <- plot(size_acc, plot = FALSE)[[1]] +
+        labs(y = "Final accuracy", x = "Initial accuracy") +
+        theme(text = element_text(size = 18))      
+ggsave("./plots/final_accuracy.svg", plot)

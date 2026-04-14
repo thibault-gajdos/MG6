@@ -72,7 +72,7 @@
 <text x='180.93' y='476.07' text-anchor='middle' style='font-size: 14.40px;fill: #4D4D4D; font-family: "Arial";' textLength='19.20px' lengthAdjust='spacingAndGlyphs'>big</text>
 <text x='379.42' y='476.07' text-anchor='middle' style='font-size: 14.40px;fill: #4D4D4D; font-family: "Arial";' textLength='33.59px' lengthAdjust='spacingAndGlyphs'>small</text>
 <text x='280.18' y='494.73' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='32.02px' lengthAdjust='spacingAndGlyphs'>size</text>
-<text transform='translate(18.37,233.16) rotate(-90)' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='187.09px' lengthAdjust='spacingAndGlyphs'>Confirmation Time (ms)</text>
+<text transform='translate(18.37,233.16) rotate(-90)' text-anchor='middle' style='font-size: 18.00px; font-family: "Arial";' textLength='166.09px' lengthAdjust='spacingAndGlyphs'>Response Time (ms)</text>
 </g>
 </g>
 </svg>

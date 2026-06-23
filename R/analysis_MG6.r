@@ -429,13 +429,21 @@ t.test(metaI$debiased.RMI_small, metaI$debiased.RMI_big, paired = TRUE)
 # ---------------------------------------------------
 
 
-
+## % change of mind
 data$change_of_mind = (data$meta_evaluation == "I")
+dd <- data %>% filter(view_again ==1)  %>%
+    group_by(subject_id) %>%
+    summarise(com = mean(change_of_mind)) %>%
+    ungroup() %>%
+    summarise(change_of_mind = mean(com))
+
+dd
+## 32.4% COM
 
 ## Q1: does change of mind depends on the circle size?
 fit_com <- brm(change_of_mind ~ accuracy_gabor  * size  * rt_gabor_centered * position + (1 +  accuracy_gabor * size  * rt_gabor_centered * position|  subject_id),
                family = bernoulli(link = "logit"),
-           data = data,
+           data = data %>% filter(view_again == 1),
            cores = 4, chains = 4,
            control = list(adapt_delta = .9,  max_treedepth = 12),
            iter = 3000,  warmup = 1000, seed = 123,
@@ -444,23 +452,3 @@ saveRDS(fit_com, "./results/fit_com.rds")
 tab_model(fit_com, file = "./tables/fit_com.html")
 
 
-## Q2 :impact of final accuracy
-data %>% summarise(acc = mean(acc_num), acc_final= mean(meta_acc_num))
-## 1 0.7060781 0.6009317
-fit_acc2 <- brm(meta_acc_num ~ accuracy_gabor  * size  * rt_gabor_centered * position+ (1 +  accuracy_gabor * size  * rt_gabor_centered  | subject_id),
-               family = bernoulli(link = "logit"),
-           data = data,
-           cores = 4, chains = 4,
-           control = list(adapt_delta = .9,  max_treedepth = 12),
-           iter = 3000,  warmup = 1000, seed = 123,
-           )
-saveRDS(fit_acc2, "./results/fit_acc2.rds")
-tab_model(fit_acc2, file = "./tables/fit_accuracy2.html")
-
-
-size_acc <- conditional_effects(fit_acc2, "accuracy_gabor:size")
-plot(size_acc)
-plot <- plot(size_acc, plot = FALSE)[[1]] +
-        labs(y = "Final accuracy", x = "Initial accuracy") +
-        theme(text = element_text(size = 18))      
-ggsave("./plots/final_accuracy.svg", plot)

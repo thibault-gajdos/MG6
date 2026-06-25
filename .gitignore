@@ -1,1 +1,2 @@
-results/*.rdsresults/*.rdsdata/all/*.rds
+results/*.rds
+data/all/*.rds
